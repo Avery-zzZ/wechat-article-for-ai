@@ -98,12 +98,12 @@ def _is_css_garbage(line: str) -> bool:
     return False
 
 
-def _extract_code_blocks(soup: BeautifulSoup) -> list[CodeBlock]:
+def _extract_code_blocks(root_soup: BeautifulSoup, content_el: Tag) -> list[CodeBlock]:
     """Extract code blocks from WeChat's .code-snippet__fix elements."""
     logger = get_logger()
     blocks: list[CodeBlock] = []
 
-    for snippet in soup.select(".code-snippet__fix"):
+    for snippet in content_el.select(".code-snippet__fix"):
         # Remove line number elements
         for line_idx in snippet.select(".code-snippet__line-index"):
             line_idx.decompose()
@@ -125,40 +125,40 @@ def _extract_code_blocks(soup: BeautifulSoup) -> list[CodeBlock]:
             logger.debug(f"Extracted code block: lang={lang}, {len(code)} chars")
 
         # Replace the snippet element with a placeholder
-        placeholder = soup.new_tag("p")
+        placeholder = root_soup.new_tag("p")
         placeholder.string = f"CODEBLOCK-PLACEHOLDER-{len(blocks) - 1}"
         snippet.replace_with(placeholder)
 
     return blocks
 
 
-def _extract_media(soup: BeautifulSoup) -> list[MediaReference]:
+def _extract_media(root_soup: BeautifulSoup, content_el: Tag) -> list[MediaReference]:
     """Extract embedded audio/video references."""
     refs: list[MediaReference] = []
 
     # WeChat audio: <mpvoice> custom element
-    for voice in soup.select("mpvoice"):
+    for voice in content_el.select("mpvoice"):
         name = voice.get("name", voice.get("voice_encode_fileid", "Audio"))
         refs.append(MediaReference(media_type="audio", name=str(name)))
-        placeholder = soup.new_tag("p")
+        placeholder = root_soup.new_tag("p")
         placeholder.string = f"[Audio: {name}]"
         voice.replace_with(placeholder)
 
     # WeChat video: <mpvideo> custom element
-    for video in soup.select("mpvideo"):
+    for video in content_el.select("mpvideo"):
         title = video.get("data-title", video.get("title", "Video"))
         src = video.get("data-src", video.get("src", ""))
         refs.append(MediaReference(media_type="video", name=str(title), src=str(src)))
-        placeholder = soup.new_tag("p")
+        placeholder = root_soup.new_tag("p")
         placeholder.string = f"[Video: {title}]"
         video.replace_with(placeholder)
 
     # iframe-based videos (e.g., Tencent Video)
-    for iframe in soup.select("iframe"):
+    for iframe in content_el.select("iframe"):
         src = str(iframe.get("src", ""))
         if any(domain in src for domain in ("v.qq.com", "player.bilibili", "youku.com")):
             refs.append(MediaReference(media_type="video", name="Embedded Video", src=src))
-            placeholder = soup.new_tag("p")
+            placeholder = root_soup.new_tag("p")
             placeholder.string = f"[Video: Embedded Video]({src})"
             iframe.replace_with(placeholder)
 
@@ -181,10 +181,10 @@ def process_content(soup: BeautifulSoup) -> ParsedContent:
         img["src"] = img["data-src"]
 
     # 2. Extract code blocks (replaces with placeholders)
-    code_blocks = _extract_code_blocks(content_el)
+    code_blocks = _extract_code_blocks(soup, content_el)
 
     # 3. Extract audio/video
-    media_refs = _extract_media(content_el)
+    media_refs = _extract_media(soup, content_el)
 
     # 4. Remove noise elements
     for selector in _NOISE_SELECTORS:
