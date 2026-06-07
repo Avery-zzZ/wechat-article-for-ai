@@ -17,7 +17,8 @@ Converts WeChat public account articles into clean Markdown files with:
 ## Prerequisites
 
 - Python 3.10+
-- Install dependencies: `pip install -r requirements.txt`
+- [uv](https://docs.astral.sh/uv/) installed and available on `PATH`
+- Dependencies are managed by uv from `pyproject.toml`
 - Camoufox browser will be auto-downloaded on first run
 
 ## Usage
@@ -25,13 +26,13 @@ Converts WeChat public account articles into clean Markdown files with:
 ### CLI (single article)
 
 ```bash
-python main.py "https://mp.weixin.qq.com/s/ARTICLE_ID"
+uv run wechat-to-md "https://mp.weixin.qq.com/s/ARTICLE_ID"
 ```
 
 ### CLI (batch from file)
 
 ```bash
-python main.py -f urls.txt -o ./output -v
+uv run wechat-to-md -f urls.txt -o ./output -v
 ```
 
 ### CLI Options
@@ -52,7 +53,7 @@ python main.py -f urls.txt -o ./output -v
 Run as an MCP server for AI tool integration:
 
 ```bash
-python mcp_server.py
+uv run wechat-to-md-mcp
 ```
 
 Exposes two tools:
@@ -65,8 +66,8 @@ Exposes two tools:
 {
   "mcpServers": {
     "wechat-to-md": {
-      "command": "python",
-      "args": ["mcp_server.py"],
+      "command": "uv",
+      "args": ["run", "wechat-to-md-mcp"],
       "cwd": "<path-to-this-project>"
     }
   }
